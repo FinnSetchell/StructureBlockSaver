@@ -23,10 +23,12 @@ public class WandRenderer {
 
     private record StructureBlockData(BlockPos pos, BlockPos offset, Vec3i size) {}
 
+    private static final int SCAN_INTERVAL = 40;
+
     private static BlockPos lastPos1 = null;
     private static BlockPos lastPos2 = null;
     private static List<StructureBlockData> cachedBlocks = List.of();
-    private static boolean tooLargeToScan = false;
+    private static int framesSinceScan = SCAN_INTERVAL;
 
     public static void register() {
         WorldRenderEvents.AFTER_TRANSLUCENT.register(WandRenderer::render);
@@ -71,18 +73,20 @@ public class WandRenderer {
         // Yellow: selection bounding box
         drawBox(poseStack, lines, minX, minY, minZ, maxX, maxY, maxZ, 255, 255, 0, 255);
 
-        if (!pos1.equals(lastPos1) || !pos2.equals(lastPos2)) {
+        boolean selectionChanged = !pos1.equals(lastPos1) || !pos2.equals(lastPos2);
+        if (selectionChanged) {
             lastPos1 = pos1;
             lastPos2 = pos2;
+            framesSinceScan = SCAN_INTERVAL;
+        }
+
+        framesSinceScan++;
+        if (framesSinceScan >= SCAN_INTERVAL) {
+            framesSinceScan = 0;
             long volume = (long)(maxX - minX) * (maxY - minY) * (maxZ - minZ);
-            if (volume > MAX_SCAN_VOLUME) {
-                tooLargeToScan = true;
-                cachedBlocks = List.of();
-            }
-            else {
-                tooLargeToScan = false;
-                cachedBlocks = scanBlocks(minX, minY, minZ, maxX - 1, maxY - 1, maxZ - 1);
-            }
+            cachedBlocks = volume > MAX_SCAN_VOLUME
+                ? List.of()
+                : scanBlocks(new BlockPos(minX, minY, minZ), new BlockPos(maxX - 1, maxY - 1, maxZ - 1));
         }
 
         for (StructureBlockData data : cachedBlocks) {
@@ -103,12 +107,12 @@ public class WandRenderer {
         poseStack.popPose();
     }
 
-    private static List<StructureBlockData> scanBlocks(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+    private static List<StructureBlockData> scanBlocks(BlockPos from, BlockPos to) {
         var level = Minecraft.getInstance().level;
         if (level == null) return List.of();
 
         List<StructureBlockData> found = new ArrayList<>();
-        for (BlockPos pos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+        for (BlockPos pos : BlockPos.betweenClosed(from, to)) {
             BlockEntity be = level.getBlockEntity(pos);
             if (!(be instanceof StructureBlockEntity sbe)) continue;
             if (sbe.getMode() != StructureMode.SAVE) continue;

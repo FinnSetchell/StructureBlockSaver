@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.1] - 2026-04-02
+
+### Fixed
+- Structure blocks and their save regions no longer failing to highlight in the wand renderer after the 1.1.0 caching optimisation
+
 ## [1.1.0] - 2026-04-02
 
 ### Added
