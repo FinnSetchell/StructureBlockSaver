@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2] - 2026-04-02
+
+### Changed
+- Removed the 50,000 block scan volume cap in the wand renderer — structure blocks are now highlighted regardless of selection size
+
 ## [1.1.1] - 2026-04-02
 
 ### Fixed

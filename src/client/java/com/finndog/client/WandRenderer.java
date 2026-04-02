@@ -19,7 +19,6 @@ import java.util.List;
 
 public class WandRenderer {
 
-    private static final long MAX_SCAN_VOLUME = 50_000;
 
     private record StructureBlockData(BlockPos pos, BlockPos offset, Vec3i size) {}
 
@@ -83,10 +82,7 @@ public class WandRenderer {
         framesSinceScan++;
         if (framesSinceScan >= SCAN_INTERVAL) {
             framesSinceScan = 0;
-            long volume = (long)(maxX - minX) * (maxY - minY) * (maxZ - minZ);
-            cachedBlocks = volume > MAX_SCAN_VOLUME
-                ? List.of()
-                : scanBlocks(new BlockPos(minX, minY, minZ), new BlockPos(maxX - 1, maxY - 1, maxZ - 1));
+            cachedBlocks = scanBlocks(new BlockPos(minX, minY, minZ), new BlockPos(maxX - 1, maxY - 1, maxZ - 1));
         }
 
         for (StructureBlockData data : cachedBlocks) {
