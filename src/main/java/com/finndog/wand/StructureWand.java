@@ -1,15 +1,18 @@
 package com.finndog.wand;
 
+import com.finndog.network.ClearSelectionPayload;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -24,14 +27,6 @@ public class StructureWand {
 	public static final Map<UUID, BlockPos> pos2Map = new HashMap<>();
 
 	public static void register() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-			dispatcher.register(
-				Commands.literal("structurewand")
-					.requires(source -> source.hasPermission(2))
-					.executes(StructureWand::giveWand)
-			)
-		);
-
 		UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
 			if (world.isClientSide) return InteractionResult.PASS;
 			if (!isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
@@ -54,6 +49,14 @@ public class StructureWand {
 		});
 	}
 
+	public static LiteralArgumentBuilder<CommandSourceStack> wandSubcommand() {
+		return Commands.literal("wand").executes(StructureWand::giveWand);
+	}
+
+	public static LiteralArgumentBuilder<CommandSourceStack> clearSubcommand() {
+		return Commands.literal("clear").executes(StructureWand::clearSelection);
+	}
+
 	public static boolean isWand(ItemStack stack) {
 		if (stack.getItem() != Items.WOODEN_AXE) return false;
 		Component name = stack.get(DataComponents.CUSTOM_NAME);
@@ -70,6 +73,15 @@ public class StructureWand {
 		var player = ctx.getSource().getPlayerOrException();
 		player.getInventory().add(createWand());
 		ctx.getSource().sendSuccess(() -> Component.literal("Given Structure Wand."), false);
+		return 1;
+	}
+
+	private static int clearSelection(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		ServerPlayer player = ctx.getSource().getPlayerOrException();
+		pos1Map.remove(player.getUUID());
+		pos2Map.remove(player.getUUID());
+		ServerPlayNetworking.send(player, new ClearSelectionPayload());
+		ctx.getSource().sendSuccess(() -> Component.literal("Selection cleared."), false);
 		return 1;
 	}
 }

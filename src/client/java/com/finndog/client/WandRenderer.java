@@ -24,7 +24,7 @@ public class WandRenderer {
     private static void render(WorldRenderContext context) {
         BlockPos pos1 = ClientWandData.pos1;
         BlockPos pos2 = ClientWandData.pos2;
-        if (pos1 == null || pos2 == null) return;
+        if (pos1 == null && pos2 == null) return;
 
         MultiBufferSource consumers = context.consumers();
         if (consumers == null) return;
@@ -38,6 +38,17 @@ public class WandRenderer {
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
         VertexConsumer lines = consumers.getBuffer(RenderType.lines());
+
+        if (pos1 != null && pos2 == null) {
+            drawBox(poseStack, lines, pos1.getX(), pos1.getY(), pos1.getZ(), pos1.getX() + 1, pos1.getY() + 1, pos1.getZ() + 1, 255, 255, 0, 255);
+            poseStack.popPose();
+            return;
+        }
+        if (pos2 != null && pos1 == null) {
+            drawBox(poseStack, lines, pos2.getX(), pos2.getY(), pos2.getZ(), pos2.getX() + 1, pos2.getY() + 1, pos2.getZ() + 1, 255, 255, 0, 255);
+            poseStack.popPose();
+            return;
+        }
 
         int minX = Math.min(pos1.getX(), pos2.getX());
         int minY = Math.min(pos1.getY(), pos2.getY());

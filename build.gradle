@@ -1,6 +1,7 @@
 plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
+	id 'me.modmuss50.mod-publish-plugin' version '1.1.0'
 }
 
 version = project.mod_version
@@ -68,6 +69,31 @@ jar {
 
 	from("LICENSE") {
 		rename { "${it}_${inputs.properties.archivesName}"}
+	}
+}
+
+def extractChangelog() {
+	def text = file("CHANGELOG.md").text
+	def sections = text.split("(?m)(?=^## )")
+	def section = sections.find { it.startsWith("## [${project.mod_version}]") }
+	if (section) {
+		return section.replaceFirst(/^## \[.*?\].*\n/, '').trim()
+	}
+	return ""
+}
+
+publishMods {
+	file = remapJar.archiveFile
+	changelog = extractChangelog()
+	version = project.mod_version
+	type = STABLE
+	modLoaders.add("fabric")
+
+	github {
+		accessToken = providers.environmentVariable("GITHUB_TOKEN")
+		repository = "FinnSetchell/StructureBlockSaver"
+		commitish = "master"
+		tagName = providers.environmentVariable("GITHUB_REF_NAME")
 	}
 }
 

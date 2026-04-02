@@ -2,8 +2,10 @@ package com.finndog;
 
 import com.finndog.client.ClientWandData;
 import com.finndog.client.WandRenderer;
+import com.finndog.network.ClearSelectionPayload;
 import com.finndog.wand.StructureWand;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.core.BlockPos;
@@ -13,6 +15,11 @@ public class StructureBlockSaverClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         WandRenderer.register();
+
+        ClientPlayNetworking.registerGlobalReceiver(ClearSelectionPayload.TYPE, (payload, context) -> {
+            ClientWandData.pos1 = null;
+            ClientWandData.pos2 = null;
+        });
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (!world.isClientSide) return InteractionResult.PASS;
