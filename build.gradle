@@ -93,7 +93,7 @@ publishMods {
 		accessToken = providers.environmentVariable("GITHUB_TOKEN")
 		repository = "FinnSetchell/StructureBlockSaver"
 		commitish = "master"
-		tagName = providers.environmentVariable("GITHUB_REF_NAME")
+		tagName = providers.environmentVariable("GITHUB_REF_NAME").orElse("v${project.mod_version}")
 	}
 }
 

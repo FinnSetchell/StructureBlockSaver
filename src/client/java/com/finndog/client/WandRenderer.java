@@ -8,14 +8,25 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.StructureBlockEntity;
 import net.minecraft.world.level.block.state.properties.StructureMode;
-import net.minecraft.core.Vec3i;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class WandRenderer {
+
+    private static final long MAX_SCAN_VOLUME = 50_000;
+
+    private record StructureBlockData(BlockPos pos, BlockPos offset, Vec3i size) {}
+
+    private static BlockPos lastPos1 = null;
+    private static BlockPos lastPos2 = null;
+    private static List<StructureBlockData> cachedBlocks = List.of();
+    private static boolean tooLargeToScan = false;
 
     public static void register() {
         WorldRenderEvents.AFTER_TRANSLUCENT.register(WandRenderer::render);
@@ -60,37 +71,50 @@ public class WandRenderer {
         // Yellow: selection bounding box
         drawBox(poseStack, lines, minX, minY, minZ, maxX, maxY, maxZ, 255, 255, 0, 255);
 
-        var level = Minecraft.getInstance().level;
-        if (level == null) {
-            poseStack.popPose();
-            return;
+        if (!pos1.equals(lastPos1) || !pos2.equals(lastPos2)) {
+            lastPos1 = pos1;
+            lastPos2 = pos2;
+            long volume = (long)(maxX - minX) * (maxY - minY) * (maxZ - minZ);
+            if (volume > MAX_SCAN_VOLUME) {
+                tooLargeToScan = true;
+                cachedBlocks = List.of();
+            }
+            else {
+                tooLargeToScan = false;
+                cachedBlocks = scanBlocks(minX, minY, minZ, maxX - 1, maxY - 1, maxZ - 1);
+            }
         }
 
-        BlockPos scanMin = new BlockPos(minX, minY, minZ);
-        BlockPos scanMax = new BlockPos(maxX - 1, maxY - 1, maxZ - 1);
-
-        for (BlockPos pos : BlockPos.betweenClosed(scanMin, scanMax)) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (!(be instanceof StructureBlockEntity sbe)) continue;
-            if (sbe.getMode() != StructureMode.SAVE) continue;
-
-            int px = pos.getX();
-            int py = pos.getY();
-            int pz = pos.getZ();
+        for (StructureBlockData data : cachedBlocks) {
+            int px = data.pos().getX();
+            int py = data.pos().getY();
+            int pz = data.pos().getZ();
 
             // Cyan: the structure block itself
             drawBox(poseStack, lines, px, py, pz, px + 1, py + 1, pz + 1, 0, 255, 255, 255);
 
             // Green: the save region defined by this structure block
-            BlockPos offset = sbe.getStructurePos();
-            Vec3i size = sbe.getStructureSize();
-            int sx = px + offset.getX();
-            int sy = py + offset.getY();
-            int sz = pz + offset.getZ();
-            drawBox(poseStack, lines, sx, sy, sz, sx + size.getX(), sy + size.getY(), sz + size.getZ(), 0, 255, 0, 255);
+            int sx = px + data.offset().getX();
+            int sy = py + data.offset().getY();
+            int sz = pz + data.offset().getZ();
+            drawBox(poseStack, lines, sx, sy, sz, sx + data.size().getX(), sy + data.size().getY(), sz + data.size().getZ(), 0, 255, 0, 255);
         }
 
         poseStack.popPose();
+    }
+
+    private static List<StructureBlockData> scanBlocks(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        var level = Minecraft.getInstance().level;
+        if (level == null) return List.of();
+
+        List<StructureBlockData> found = new ArrayList<>();
+        for (BlockPos pos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (!(be instanceof StructureBlockEntity sbe)) continue;
+            if (sbe.getMode() != StructureMode.SAVE) continue;
+            found.add(new StructureBlockData(pos.immutable(), sbe.getStructurePos(), sbe.getStructureSize()));
+        }
+        return found;
     }
 
     private static void drawBox(PoseStack poseStack, VertexConsumer consumer,

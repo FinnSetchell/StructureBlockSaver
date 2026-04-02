@@ -3,7 +3,8 @@
 	"package": "com.finndog.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"ExampleClientMixin"
+		"ExampleClientMixin",
+		"ScrollMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -9,6 +9,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -112,6 +113,7 @@ public class SaveStructuresCommand {
 		List<String> names = new ArrayList<>();
 
 		for (BlockPos pos : BlockPos.betweenClosed(pos1, pos2)) {
+			if (!level.isLoaded(pos)) continue;
 			BlockEntity be = level.getBlockEntity(pos);
 			if (!(be instanceof StructureBlockEntity sbe)) continue;
 			if (sbe.getMode() != StructureMode.SAVE) continue;
@@ -136,6 +138,63 @@ public class SaveStructuresCommand {
 		source.sendSuccess(() -> Component.literal(msg), !dryRun);
 		return names.size();
 	}
+
+	//////////////////////////////
+
+	public static LiteralArgumentBuilder<CommandSourceStack> listSubcommand() {
+		return Commands.literal("list")
+			.executes(SaveStructuresCommand::fromWandList)
+			.then(Commands.argument("pos1", BlockPosArgument.blockPos())
+				.then(Commands.argument("pos2", BlockPosArgument.blockPos())
+					.executes(SaveStructuresCommand::explicitList)));
+	}
+
+	private static int fromWandList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		CommandSourceStack source = ctx.getSource();
+		ServerPlayer player = source.getPlayerOrException();
+		BlockPos pos1 = StructureWand.pos1Map.get(player.getUUID());
+		BlockPos pos2 = StructureWand.pos2Map.get(player.getUUID());
+		if (pos1 == null || pos2 == null) {
+			source.sendFailure(Component.literal("Select both positions with the Structure Wand first."));
+			return 0;
+		}
+		return executeList(source, pos1, pos2);
+	}
+
+	private static int explicitList(CommandContext<CommandSourceStack> ctx) {
+		return executeList(ctx.getSource(),
+			BlockPosArgument.getBlockPos(ctx, "pos1"),
+			BlockPosArgument.getBlockPos(ctx, "pos2"));
+	}
+
+	private static int executeList(CommandSourceStack source, BlockPos pos1, BlockPos pos2) {
+		ServerLevel level = source.getLevel();
+		List<String> lines = new ArrayList<>();
+
+		for (BlockPos pos : BlockPos.betweenClosed(pos1, pos2)) {
+			if (!level.isLoaded(pos)) continue;
+			BlockEntity be = level.getBlockEntity(pos);
+			if (!(be instanceof StructureBlockEntity sbe)) continue;
+			Vec3i size = sbe.getStructureSize();
+			lines.add("[" + sbe.getMode().name() + "] " + sbe.getStructureName()
+				+ " (" + size.getX() + "x" + size.getY() + "x" + size.getZ() + ")");
+		}
+
+		StringBuilder sb = new StringBuilder("Found ").append(lines.size()).append(" structure block(s)");
+		if (!lines.isEmpty()) {
+			sb.append(":");
+			for (String line : lines) sb.append("\n  - ").append(line);
+		}
+		else {
+			sb.append(".");
+		}
+
+		String msg = sb.toString();
+		source.sendSuccess(() -> Component.literal(msg), false);
+		return lines.size();
+	}
+
+	//////////////////////////////
 
 	private static boolean matchesFilter(String name, String filter) {
 		if (!filter.contains("*")) return name.equals(filter);
