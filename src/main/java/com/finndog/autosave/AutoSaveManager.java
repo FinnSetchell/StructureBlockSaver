@@ -90,7 +90,7 @@ public class AutoSaveManager {
     }
 
     private static void doSave(ServerPlayer player, Session s) {
-        ServerLevel level = player.serverLevel();
+        ServerLevel level = (ServerLevel) player.level();
         int count = 0;
         for (BlockPos pos : BlockPos.betweenClosed(s.pos1(), s.pos2())) {
             if (!level.isLoaded(pos)) continue;

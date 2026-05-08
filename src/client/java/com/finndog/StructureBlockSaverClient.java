@@ -24,7 +24,7 @@ public class StructureBlockSaverClient implements ClientModInitializer {
         });
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if (!world.isClientSide) return InteractionResult.PASS;
+            if (!world.isClientSide()) return InteractionResult.PASS;
             if (!StructureWand.isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
             BlockPos pos1 = hitResult.getBlockPos();
             if (pos1.equals(ClientWandData.pos1)) return InteractionResult.SUCCESS;
@@ -34,7 +34,7 @@ public class StructureBlockSaverClient implements ClientModInitializer {
         });
 
         AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
-            if (!world.isClientSide) return InteractionResult.PASS;
+            if (!world.isClientSide()) return InteractionResult.PASS;
             if (!StructureWand.isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
             BlockPos pos2 = pos.immutable();
             if (pos2.equals(ClientWandData.pos2)) return InteractionResult.SUCCESS;

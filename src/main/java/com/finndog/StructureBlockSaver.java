@@ -23,7 +23,7 @@ public class StructureBlockSaver implements ModInitializer {
 		PayloadTypeRegistry.playC2S().register(ExpandSelectionPayload.TYPE, ExpandSelectionPayload.STREAM_CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(ExpandSelectionPayload.TYPE, (payload, context) -> {
-			context.player().server.execute(() -> {
+			context.server().execute(() -> {
 				UUID uuid = context.player().getUUID();
 				if (payload.isPos1()) {
 					StructureWand.pos1Map.put(uuid, payload.newPos());

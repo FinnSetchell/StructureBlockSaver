@@ -2,8 +2,8 @@ package com.finndog.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -30,7 +30,7 @@ public class WandRenderer {
     private static int framesSinceScan = SCAN_INTERVAL;
 
     public static void register() {
-        WorldRenderEvents.AFTER_TRANSLUCENT.register(WandRenderer::render);
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(WandRenderer::render);
     }
 
     private static void render(WorldRenderContext context) {
@@ -41,10 +41,10 @@ public class WandRenderer {
         MultiBufferSource consumers = context.consumers();
         if (consumers == null) return;
 
-        PoseStack poseStack = context.matrixStack();
+        PoseStack poseStack = context.matrices();
         if (poseStack == null) return;
 
-        Vec3 camPos = context.camera().getPosition();
+        Vec3 camPos = context.gameRenderer().getMainCamera().getPosition();
 
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);

@@ -28,23 +28,23 @@ public class StructureWand {
 
 	public static void register() {
 		UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-			if (world.isClientSide) return InteractionResult.PASS;
+			if (world.isClientSide()) return InteractionResult.PASS;
 			if (!isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
 
 			BlockPos pos = hitResult.getBlockPos();
 			if (pos.equals(pos1Map.get(player.getUUID()))) return InteractionResult.SUCCESS;
 			pos1Map.put(player.getUUID(), pos);
-			player.sendSystemMessage(Component.literal("Position 1 set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
+			((ServerPlayer) player).sendSystemMessage(Component.literal("Position 1 set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
 			return InteractionResult.SUCCESS;
 		});
 
 		AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
-			if (world.isClientSide) return InteractionResult.PASS;
+			if (world.isClientSide()) return InteractionResult.PASS;
 			if (!isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
 
 			if (pos.equals(pos2Map.get(player.getUUID()))) return InteractionResult.SUCCESS;
 			pos2Map.put(player.getUUID(), pos);
-			player.sendSystemMessage(Component.literal("Position 2 set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
+			((ServerPlayer) player).sendSystemMessage(Component.literal("Position 2 set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
 			return InteractionResult.SUCCESS;
 		});
 	}
