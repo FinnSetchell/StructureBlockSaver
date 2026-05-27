@@ -23,7 +23,13 @@ public class StructureBlockSaver implements ModInitializer {
 	public void onInitialize() {
 		PayloadTypeRegistry.playS2C().register(ClearSelectionPayload.TYPE, ClearSelectionPayload.STREAM_CODEC);
 		PayloadTypeRegistry.playS2C().register(ClientboundSaveStructurePayload.TYPE, ClientboundSaveStructurePayload.STREAM_CODEC);
+		PayloadTypeRegistry.playS2C().register(com.finndog.network.ClientboundOpenMenuPayload.TYPE, com.finndog.network.ClientboundOpenMenuPayload.STREAM_CODEC);
 		PayloadTypeRegistry.playC2S().register(ExpandSelectionPayload.TYPE, ExpandSelectionPayload.STREAM_CODEC);
+		PayloadTypeRegistry.playC2S().register(com.finndog.network.ServerboundTargetedSavePayload.TYPE, com.finndog.network.ServerboundTargetedSavePayload.STREAM_CODEC);
+
+		ServerPlayNetworking.registerGlobalReceiver(com.finndog.network.ServerboundTargetedSavePayload.TYPE, (payload, context) -> {
+			com.finndog.utils.TickProcessor.submit(new com.finndog.utils.TargetedSaveTask(context.player(), payload.positions(), payload.localSave()));
+		});
 
 		ServerPlayNetworking.registerGlobalReceiver(ExpandSelectionPayload.TYPE, (payload, context) -> {
 			context.server().execute(() -> {

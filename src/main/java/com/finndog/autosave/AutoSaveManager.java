@@ -92,7 +92,7 @@ public class AutoSaveManager {
     }
 
     private static void doSave(ServerPlayer player, Session s) {
-        StructureScanTask task = new StructureScanTask(player.createCommandSourceStack(), s.pos1(), s.pos2(), null, false, false, true, false);
+        StructureScanTask task = new StructureScanTask(player.createCommandSourceStack(), s.pos1(), s.pos2(), null, false, false, true, false, false);
         TickProcessor.submit(task);
     }
 }

@@ -23,6 +23,12 @@ public class StructureBlockSaverClient implements ClientModInitializer {
             ClientWandData.pos2 = null;
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundOpenMenuPayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                net.minecraft.client.Minecraft.getInstance().setScreen(new com.finndog.client.gui.StructureMenuScreen(payload.structures()));
+            });
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundSaveStructurePayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
                 try {

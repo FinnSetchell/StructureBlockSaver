@@ -19,6 +19,7 @@ public class SbsCommand {
 					.then(SaveStructuresCommand.localsaveSubcommand())
 					.then(SaveStructuresCommand.filteredlocalsaveSubcommand())
 					.then(SaveStructuresCommand.listSubcommand())
+					.then(SaveStructuresCommand.menuSubcommand())
 					.then(AutoSaveManager.subcommand())
 			)
 		);

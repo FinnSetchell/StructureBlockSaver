@@ -26,14 +26,16 @@ public class StructureScanTask implements TickProcessor.TickTask {
 	private final boolean listMode;
 	private final boolean autoSave;
 	private final boolean localSave;
+	private final boolean menuMode;
 
 	private final Queue<ChunkPos> chunksToProcess = new LinkedList<>();
 	private final List<String> results = new ArrayList<>();
+	private final List<com.finndog.network.ClientboundOpenMenuPayload.StructureInfo> menuResults = new ArrayList<>();
 
 	private final int totalChunks;
 	private final int minX, maxX, minY, maxY, minZ, maxZ;
 
-	public StructureScanTask(CommandSourceStack source, BlockPos pos1, BlockPos pos2, String filter, boolean dryRun, boolean listMode, boolean autoSave, boolean localSave) {
+	public StructureScanTask(CommandSourceStack source, BlockPos pos1, BlockPos pos2, String filter, boolean dryRun, boolean listMode, boolean autoSave, boolean localSave, boolean menuMode) {
 		this.level = source.getLevel();
 		this.source = source;
 		this.pos1 = pos1;
@@ -43,6 +45,7 @@ public class StructureScanTask implements TickProcessor.TickTask {
 		this.listMode = listMode;
 		this.autoSave = autoSave;
 		this.localSave = localSave;
+		this.menuMode = menuMode;
 
 		this.minX = Math.min(pos1.getX(), pos2.getX());
 		this.maxX = Math.max(pos1.getX(), pos2.getX());
@@ -59,7 +62,7 @@ public class StructureScanTask implements TickProcessor.TickTask {
 
 		this.totalChunks = chunksToProcess.size();
 		if (totalChunks > 1 && !autoSave) {
-			String action = listMode ? "listing" : (localSave ? "locally saving" : "saving");
+			String action = menuMode ? "opening menu for" : (listMode ? "listing" : (localSave ? "locally saving" : "saving"));
 			source.sendSuccess(() -> Component.literal("Started " + action + " structures in " + totalChunks + " chunks. This may take a moment..."), false);
 		}
 	}
@@ -92,7 +95,10 @@ public class StructureScanTask implements TickProcessor.TickTask {
 				continue;
 			}
 
-			if (listMode) {
+			if (menuMode) {
+				if (sbe.getMode() != StructureMode.SAVE) continue;
+				menuResults.add(new com.finndog.network.ClientboundOpenMenuPayload.StructureInfo(pos.immutable(), sbe.getStructureName(), sbe.getStructureSize()));
+			} else if (listMode) {
 				Vec3i size = sbe.getStructureSize();
 				results.add("[" + sbe.getMode().name() + "] " + sbe.getStructureName()
 					+ " (" + size.getX() + "x" + size.getY() + "x" + size.getZ() + ")");
@@ -126,7 +132,11 @@ public class StructureScanTask implements TickProcessor.TickTask {
 	}
 
 	private void finish() {
-		if (listMode) {
+		if (menuMode) {
+			if (source.getPlayer() instanceof net.minecraft.server.level.ServerPlayer sp) {
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new com.finndog.network.ClientboundOpenMenuPayload(menuResults));
+			}
+		} else if (listMode) {
 			StringBuilder sb = new StringBuilder("Found ").append(results.size()).append(" structure block(s)");
 			if (!results.isEmpty()) {
 				sb.append(":");

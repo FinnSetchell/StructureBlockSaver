@@ -146,7 +146,7 @@ public class SaveStructuresCommand {
 	}
 
 	private static int executeSave(CommandSourceStack source, BlockPos pos1, BlockPos pos2, String filter, boolean dryRun, boolean localSave) {
-		StructureScanTask task = new StructureScanTask(source, pos1, pos2, filter, dryRun, false, false, localSave);
+		StructureScanTask task = new StructureScanTask(source, pos1, pos2, filter, dryRun, false, false, localSave, false);
 		TickProcessor.submit(task);
 		return 1;
 	}
@@ -161,7 +161,23 @@ public class SaveStructuresCommand {
 					.executes(SaveStructuresCommand::explicitList)));
 	}
 
+	public static LiteralArgumentBuilder<CommandSourceStack> menuSubcommand() {
+		return Commands.literal("menu")
+			.executes(SaveStructuresCommand::fromWandMenu)
+			.then(Commands.argument("pos1", BlockPosArgument.blockPos())
+				.then(Commands.argument("pos2", BlockPosArgument.blockPos())
+					.executes(SaveStructuresCommand::explicitMenu)));
+	}
+
 	private static int fromWandList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		return executeListOrMenu(ctx, false);
+	}
+
+	private static int fromWandMenu(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		return executeListOrMenu(ctx, true);
+	}
+
+	private static int executeListOrMenu(CommandContext<CommandSourceStack> ctx, boolean menu) throws CommandSyntaxException {
 		CommandSourceStack source = ctx.getSource();
 		ServerPlayer player = source.getPlayerOrException();
 		BlockPos pos1 = StructureWand.pos1Map.get(player.getUUID());
@@ -170,17 +186,24 @@ public class SaveStructuresCommand {
 			source.sendFailure(Component.literal("Select both positions with the Structure Wand first."));
 			return 0;
 		}
-		return executeList(source, pos1, pos2);
+		StructureScanTask task = new StructureScanTask(source, pos1, pos2, null, false, !menu, false, false, menu);
+		TickProcessor.submit(task);
+		return 1;
 	}
 
 	private static int explicitList(CommandContext<CommandSourceStack> ctx) {
-		return executeList(ctx.getSource(),
-			BlockPosArgument.getBlockPos(ctx, "pos1"),
-			BlockPosArgument.getBlockPos(ctx, "pos2"));
+		return executeExplicitListOrMenu(ctx, false);
 	}
 
-	private static int executeList(CommandSourceStack source, BlockPos pos1, BlockPos pos2) {
-		StructureScanTask task = new StructureScanTask(source, pos1, pos2, null, false, true, false, false);
+	private static int explicitMenu(CommandContext<CommandSourceStack> ctx) {
+		return executeExplicitListOrMenu(ctx, true);
+	}
+
+	private static int executeExplicitListOrMenu(CommandContext<CommandSourceStack> ctx, boolean menu) {
+		CommandSourceStack source = ctx.getSource();
+		BlockPos pos1 = BlockPosArgument.getBlockPos(ctx, "pos1");
+		BlockPos pos2 = BlockPosArgument.getBlockPos(ctx, "pos2");
+		StructureScanTask task = new StructureScanTask(source, pos1, pos2, null, false, !menu, false, false, menu);
 		TickProcessor.submit(task);
 		return 1;
 	}
