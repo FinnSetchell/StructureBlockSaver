@@ -108,11 +108,30 @@ public class WandRenderer {
         if (level == null) return List.of();
 
         List<StructureBlockData> found = new ArrayList<>();
-        for (BlockPos pos : BlockPos.betweenClosed(from, to)) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (!(be instanceof StructureBlockEntity sbe)) continue;
-            if (sbe.getMode() != StructureMode.SAVE) continue;
-            found.add(new StructureBlockData(pos.immutable(), sbe.getStructurePos(), sbe.getStructureSize()));
+        int minX = Math.min(from.getX(), to.getX());
+        int maxX = Math.max(from.getX(), to.getX());
+        int minY = Math.min(from.getY(), to.getY());
+        int maxY = Math.max(from.getY(), to.getY());
+        int minZ = Math.min(from.getZ(), to.getZ());
+        int maxZ = Math.max(from.getZ(), to.getZ());
+
+        for (int cx = minX >> 4; cx <= (maxX) >> 4; cx++) {
+            for (int cz = minZ >> 4; cz <= (maxZ) >> 4; cz++) {
+                if (level.hasChunk(cx, cz)) {
+                    net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunk(cx, cz);
+                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                        if (!(be instanceof StructureBlockEntity sbe)) continue;
+                        BlockPos pos = sbe.getBlockPos();
+                        if (pos.getX() < minX || pos.getX() > maxX ||
+                            pos.getY() < minY || pos.getY() > maxY ||
+                            pos.getZ() < minZ || pos.getZ() > maxZ) {
+                            continue;
+                        }
+                        if (sbe.getMode() != StructureMode.SAVE) continue;
+                        found.add(new StructureBlockData(pos.immutable(), sbe.getStructurePos(), sbe.getStructureSize()));
+                    }
+                }
+            }
         }
         return found;
     }
