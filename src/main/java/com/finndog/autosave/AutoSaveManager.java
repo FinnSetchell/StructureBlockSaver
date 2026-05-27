@@ -1,6 +1,8 @@
 package com.finndog.autosave;
 
 import com.finndog.wand.StructureWand;
+import com.finndog.utils.StructureScanTask;
+import com.finndog.utils.TickProcessor;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -90,16 +92,7 @@ public class AutoSaveManager {
     }
 
     private static void doSave(ServerPlayer player, Session s) {
-        ServerLevel level = (ServerLevel) player.level();
-        int count = 0;
-        for (BlockPos pos : BlockPos.betweenClosed(s.pos1(), s.pos2())) {
-            if (!level.isLoaded(pos)) continue;
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof StructureBlockEntity sbe && sbe.getMode() == StructureMode.SAVE) {
-                if (sbe.saveStructure()) count++;
-            }
-        }
-        int saved = count;
-        player.sendSystemMessage(Component.literal("[AutoSave] Saved " + saved + " structure(s)."));
+        StructureScanTask task = new StructureScanTask(player.createCommandSourceStack(), s.pos1(), s.pos2(), null, false, false, true, false);
+        TickProcessor.submit(task);
     }
 }

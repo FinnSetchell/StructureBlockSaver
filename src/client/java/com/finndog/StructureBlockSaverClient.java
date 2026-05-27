@@ -23,6 +23,24 @@ public class StructureBlockSaverClient implements ClientModInitializer {
             ClientWandData.pos2 = null;
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundSaveStructurePayload.TYPE, (payload, context) -> {
+            context.client().execute(() -> {
+                try {
+                    java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("structures");
+                    String safeName = payload.name().replace(":", "/");
+                    java.nio.file.Path targetFile = dir.resolve(safeName + ".nbt");
+                    if (!java.nio.file.Files.exists(targetFile.getParent())) {
+                        java.nio.file.Files.createDirectories(targetFile.getParent());
+                    }
+                    net.minecraft.nbt.NbtIo.writeCompressed(payload.nbt(), targetFile);
+                    context.player().displayClientMessage(net.minecraft.network.chat.Component.literal("Saved local structure: " + payload.name()), false);
+                } catch (Exception e) {
+                    StructureBlockSaver.LOGGER.error("Failed to save local structure", e);
+                    context.player().displayClientMessage(net.minecraft.network.chat.Component.literal("Failed to save local structure " + payload.name()), false);
+                }
+            });
+        });
+
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (!world.isClientSide()) return InteractionResult.PASS;
             if (!StructureWand.isWand(player.getItemInHand(hand))) return InteractionResult.PASS;

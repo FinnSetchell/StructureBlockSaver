@@ -3,7 +3,9 @@ package com.finndog;
 import com.finndog.autosave.AutoSaveManager;
 import com.finndog.commands.SbsCommand;
 import com.finndog.network.ClearSelectionPayload;
+import com.finndog.network.ClientboundSaveStructurePayload;
 import com.finndog.network.ExpandSelectionPayload;
+import com.finndog.utils.TickProcessor;
 import com.finndog.wand.StructureWand;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
@@ -20,6 +22,7 @@ public class StructureBlockSaver implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		PayloadTypeRegistry.playS2C().register(ClearSelectionPayload.TYPE, ClearSelectionPayload.STREAM_CODEC);
+		PayloadTypeRegistry.playS2C().register(ClientboundSaveStructurePayload.TYPE, ClientboundSaveStructurePayload.STREAM_CODEC);
 		PayloadTypeRegistry.playC2S().register(ExpandSelectionPayload.TYPE, ExpandSelectionPayload.STREAM_CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(ExpandSelectionPayload.TYPE, (payload, context) -> {
@@ -36,6 +39,7 @@ public class StructureBlockSaver implements ModInitializer {
 
 		AutoSaveManager.register();
 		SbsCommand.register();
+		TickProcessor.register();
 		StructureWand.register();
 	}
 }

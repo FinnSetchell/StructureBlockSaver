@@ -1,6 +1,8 @@
 package com.finndog.commands;
 
 import com.finndog.wand.StructureWand;
+import com.finndog.utils.StructureScanTask;
+import com.finndog.utils.TickProcessor;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -36,6 +38,15 @@ public class SaveStructuresCommand {
 						.executes(SaveStructuresCommand::explicitFilter))));
 	}
 
+	public static LiteralArgumentBuilder<CommandSourceStack> filteredlocalsaveSubcommand() {
+		return Commands.literal("filteredlocalsave")
+			.then(Commands.argument("filter", StringArgumentType.word())
+				.executes(SaveStructuresCommand::fromWandFilterLocal)
+				.then(Commands.argument("pos1", BlockPosArgument.blockPos())
+					.then(Commands.argument("pos2", BlockPosArgument.blockPos())
+						.executes(SaveStructuresCommand::explicitFilterLocal))));
+	}
+
 	public static LiteralArgumentBuilder<CommandSourceStack> saveSubcommand() {
 		return Commands.literal("save")
 			.executes(SaveStructuresCommand::fromWandSave)
@@ -53,43 +64,69 @@ public class SaveStructuresCommand {
 						.executes(SaveStructuresCommand::explicitFilter))));
 	}
 
+	public static LiteralArgumentBuilder<CommandSourceStack> localsaveSubcommand() {
+		return Commands.literal("localsave")
+			.executes(SaveStructuresCommand::fromWandSaveLocal)
+			.then(Commands.argument("pos1", BlockPosArgument.blockPos())
+				.then(Commands.argument("pos2", BlockPosArgument.blockPos())
+					.executes(SaveStructuresCommand::explicitLocal)
+					.then(Commands.argument("filter", StringArgumentType.word())
+						.executes(SaveStructuresCommand::explicitFilterLocal))));
+	}
+
 	//////////////////////////////
 
 	private static int fromWandSave(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-		return fromWand(ctx, null, false);
+		return fromWand(ctx, null, false, false);
+	}
+
+	private static int fromWandSaveLocal(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		return fromWand(ctx, null, false, true);
 	}
 
 	private static int fromWandDryRun(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-		return fromWand(ctx, null, true);
+		return fromWand(ctx, null, true, false);
 	}
 
 	private static int fromWandFilter(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-		return fromWand(ctx, StringArgumentType.getString(ctx, "filter"), false);
+		return fromWand(ctx, StringArgumentType.getString(ctx, "filter"), false, false);
+	}
+
+	private static int fromWandFilterLocal(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+		return fromWand(ctx, StringArgumentType.getString(ctx, "filter"), false, true);
 	}
 
 	private static int fromWandDryRunFilter(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-		return fromWand(ctx, StringArgumentType.getString(ctx, "filter"), true);
+		return fromWand(ctx, StringArgumentType.getString(ctx, "filter"), true, false);
 	}
 
 	private static int explicit(CommandContext<CommandSourceStack> ctx) {
-		return withArgs(ctx, null, false);
+		return withArgs(ctx, null, false, false);
+	}
+
+	private static int explicitLocal(CommandContext<CommandSourceStack> ctx) {
+		return withArgs(ctx, null, false, true);
 	}
 
 	private static int explicitDryRun(CommandContext<CommandSourceStack> ctx) {
-		return withArgs(ctx, null, true);
+		return withArgs(ctx, null, true, false);
 	}
 
 	private static int explicitFilter(CommandContext<CommandSourceStack> ctx) {
-		return withArgs(ctx, StringArgumentType.getString(ctx, "filter"), false);
+		return withArgs(ctx, StringArgumentType.getString(ctx, "filter"), false, false);
+	}
+
+	private static int explicitFilterLocal(CommandContext<CommandSourceStack> ctx) {
+		return withArgs(ctx, StringArgumentType.getString(ctx, "filter"), false, true);
 	}
 
 	private static int explicitDryRunFilter(CommandContext<CommandSourceStack> ctx) {
-		return withArgs(ctx, StringArgumentType.getString(ctx, "filter"), true);
+		return withArgs(ctx, StringArgumentType.getString(ctx, "filter"), true, false);
 	}
 
 	//////////////////////////////
 
-	private static int fromWand(CommandContext<CommandSourceStack> ctx, String filter, boolean dryRun) throws CommandSyntaxException {
+	private static int fromWand(CommandContext<CommandSourceStack> ctx, String filter, boolean dryRun, boolean localSave) throws CommandSyntaxException {
 		CommandSourceStack source = ctx.getSource();
 		ServerPlayer player = source.getPlayerOrException();
 		BlockPos pos1 = StructureWand.pos1Map.get(player.getUUID());
@@ -98,45 +135,20 @@ public class SaveStructuresCommand {
 			source.sendFailure(Component.literal("Select both positions with the Structure Wand first."));
 			return 0;
 		}
-		return executeSave(source, pos1, pos2, filter, dryRun);
+		return executeSave(source, pos1, pos2, filter, dryRun, localSave);
 	}
 
-	private static int withArgs(CommandContext<CommandSourceStack> ctx, String filter, boolean dryRun) {
+	private static int withArgs(CommandContext<CommandSourceStack> ctx, String filter, boolean dryRun, boolean localSave) {
 		return executeSave(ctx.getSource(),
 			BlockPosArgument.getBlockPos(ctx, "pos1"),
 			BlockPosArgument.getBlockPos(ctx, "pos2"),
-			filter, dryRun);
+			filter, dryRun, localSave);
 	}
 
-	private static int executeSave(CommandSourceStack source, BlockPos pos1, BlockPos pos2, String filter, boolean dryRun) {
-		ServerLevel level = source.getLevel();
-		List<String> names = new ArrayList<>();
-
-		for (BlockPos pos : BlockPos.betweenClosed(pos1, pos2)) {
-			if (!level.isLoaded(pos)) continue;
-			BlockEntity be = level.getBlockEntity(pos);
-			if (!(be instanceof StructureBlockEntity sbe)) continue;
-			if (sbe.getMode() != StructureMode.SAVE) continue;
-			String name = sbe.getStructureName();
-			if (filter != null && !matchesFilter(name, filter)) continue;
-			if (dryRun || sbe.saveStructure()) {
-				names.add(name);
-			}
-		}
-
-		String prefix = dryRun ? "[Dry Run] Found " : "Saved ";
-		StringBuilder sb = new StringBuilder(prefix).append(names.size()).append(" structure(s)");
-		if (!names.isEmpty()) {
-			sb.append(":");
-			for (String name : names) sb.append("\n  - ").append(name);
-		}
-		else {
-			sb.append(".");
-		}
-
-		String msg = sb.toString();
-		source.sendSuccess(() -> Component.literal(msg), !dryRun);
-		return names.size();
+	private static int executeSave(CommandSourceStack source, BlockPos pos1, BlockPos pos2, String filter, boolean dryRun, boolean localSave) {
+		StructureScanTask task = new StructureScanTask(source, pos1, pos2, filter, dryRun, false, false, localSave);
+		TickProcessor.submit(task);
+		return 1;
 	}
 
 	//////////////////////////////
@@ -168,30 +180,9 @@ public class SaveStructuresCommand {
 	}
 
 	private static int executeList(CommandSourceStack source, BlockPos pos1, BlockPos pos2) {
-		ServerLevel level = source.getLevel();
-		List<String> lines = new ArrayList<>();
-
-		for (BlockPos pos : BlockPos.betweenClosed(pos1, pos2)) {
-			if (!level.isLoaded(pos)) continue;
-			BlockEntity be = level.getBlockEntity(pos);
-			if (!(be instanceof StructureBlockEntity sbe)) continue;
-			Vec3i size = sbe.getStructureSize();
-			lines.add("[" + sbe.getMode().name() + "] " + sbe.getStructureName()
-				+ " (" + size.getX() + "x" + size.getY() + "x" + size.getZ() + ")");
-		}
-
-		StringBuilder sb = new StringBuilder("Found ").append(lines.size()).append(" structure block(s)");
-		if (!lines.isEmpty()) {
-			sb.append(":");
-			for (String line : lines) sb.append("\n  - ").append(line);
-		}
-		else {
-			sb.append(".");
-		}
-
-		String msg = sb.toString();
-		source.sendSuccess(() -> Component.literal(msg), false);
-		return lines.size();
+		StructureScanTask task = new StructureScanTask(source, pos1, pos2, null, false, true, false, false);
+		TickProcessor.submit(task);
+		return 1;
 	}
 
 	//////////////////////////////
