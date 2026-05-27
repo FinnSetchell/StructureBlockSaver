@@ -14,9 +14,28 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 
 public class StructureBlockSaverClient implements ClientModInitializer {
+    private static net.minecraft.client.KeyMapping openMenuKey;
     @Override
     public void onInitializeClient() {
         WandRenderer.register();
+
+        openMenuKey = net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(new net.minecraft.client.KeyMapping(
+            "key.structure_block_saver.open_menu",
+            com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN,
+            net.minecraft.client.KeyMapping.Category.MISC
+        ));
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (openMenuKey.consumeClick()) {
+                if (client.player != null) {
+                    if (com.finndog.client.ClientWandData.lastMenuData != null) {
+                        client.setScreen(new com.finndog.client.gui.StructureMenuScreen(com.finndog.client.ClientWandData.lastMenuData));
+                    }
+                    client.player.connection.sendCommand("sbs menu");
+                }
+            }
+        });
 
         ClientPlayNetworking.registerGlobalReceiver(ClearSelectionPayload.TYPE, (payload, context) -> {
             ClientWandData.pos1 = null;
@@ -25,7 +44,13 @@ public class StructureBlockSaverClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundOpenMenuPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
-                net.minecraft.client.Minecraft.getInstance().setScreen(new com.finndog.client.gui.StructureMenuScreen(payload.structures()));
+                com.finndog.client.ClientWandData.lastMenuData = payload.structures();
+                net.minecraft.client.gui.screens.Screen currentScreen = net.minecraft.client.Minecraft.getInstance().screen;
+                if (currentScreen instanceof com.finndog.client.gui.StructureMenuScreen menuScreen) {
+                    menuScreen.updateStructures(payload.structures());
+                } else {
+                    net.minecraft.client.Minecraft.getInstance().setScreen(new com.finndog.client.gui.StructureMenuScreen(payload.structures()));
+                }
             });
         });
 
@@ -81,7 +106,7 @@ public class StructureBlockSaverClient implements ClientModInitializer {
             int screenW = mc.getWindow().getGuiScaledWidth();
             int screenH = mc.getWindow().getGuiScaledHeight();
             int textW = mc.font.width(text);
-            guiGraphics.drawString(mc.font, text, (screenW - textW) / 2, screenH - 59, 0xFFFFFF);
+            guiGraphics.drawString(mc.font, text, (screenW - textW) / 2, screenH - 59, -1);
         });
     }
 }

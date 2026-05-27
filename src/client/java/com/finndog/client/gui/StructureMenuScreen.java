@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class StructureMenuScreen extends Screen {
-    private final List<StructureInfo> allStructures;
+    private List<StructureInfo> allStructures;
     private StructureListWidget listWidget;
     private EditBox searchBox;
     private boolean sortByName = true;
@@ -77,6 +77,11 @@ public class StructureMenuScreen extends Screen {
         }
     }
 
+    public void updateStructures(List<StructureInfo> structures) {
+        this.allStructures = structures;
+        this.refreshList();
+    }
+
     private void refreshList() {
         this.listWidget.clearStructures();
         String query = this.searchBox.getValue().toLowerCase();
@@ -93,7 +98,8 @@ public class StructureMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 5, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 5, -1);
     }
 }

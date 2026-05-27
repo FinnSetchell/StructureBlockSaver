@@ -19,6 +19,11 @@ public class StructureListWidget extends ObjectSelectionList<StructureListWidget
         super(minecraft, width, height, y0, itemHeight);
     }
 
+    @Override
+    public int getRowWidth() {
+        return 280;
+    }
+
     public void addStructureEntry(StructureInfo info) {
         this.addEntry(new Entry(info));
     }
@@ -31,9 +36,16 @@ public class StructureListWidget extends ObjectSelectionList<StructureListWidget
         public final StructureInfo info;
         private final Button saveButton;
         private final Button localSaveButton;
+        private final Button tpButton;
 
         public Entry(StructureInfo info) {
             this.info = info;
+            this.tpButton = Button.builder(Component.literal("TP"), btn -> {
+                if (Minecraft.getInstance().player != null) {
+                    Minecraft.getInstance().player.connection.sendCommand("tp " + info.pos().getX() + " " + info.pos().getY() + " " + info.pos().getZ());
+                }
+            }).bounds(0, 0, 30, 20).build();
+
             this.saveButton = Button.builder(Component.literal("Save"), btn -> {
                 ClientPlayNetworking.send(new ServerboundTargetedSavePayload(List.of(info.pos()), false));
                 if (Minecraft.getInstance().player != null) {
@@ -60,7 +72,11 @@ public class StructureListWidget extends ObjectSelectionList<StructureListWidget
             int top = this.getY();
             int width = this.getWidth();
             String text = info.name() + " (" + info.size().getX() + "x" + info.size().getY() + "x" + info.size().getZ() + ")";
-            guiGraphics.drawString(Minecraft.getInstance().font, text, left + 5, top + 6, 0xFFFFFF);
+            guiGraphics.drawString(Minecraft.getInstance().font, text, left + 5, top + 6, -1);
+
+            this.tpButton.setX(left + width - 150);
+            this.tpButton.setY(top);
+            this.tpButton.render(guiGraphics, mouseX, mouseY, partialTick);
 
             this.saveButton.setX(left + width - 115);
             this.saveButton.setY(top);
@@ -73,6 +89,7 @@ public class StructureListWidget extends ObjectSelectionList<StructureListWidget
 
         @Override
         public boolean mouseClicked(MouseButtonEvent event, boolean bl) {
+            if (this.tpButton.mouseClicked(event, bl)) return true;
             if (this.saveButton.mouseClicked(event, bl)) return true;
             if (this.localSaveButton.mouseClicked(event, bl)) return true;
             return super.mouseClicked(event, bl);
