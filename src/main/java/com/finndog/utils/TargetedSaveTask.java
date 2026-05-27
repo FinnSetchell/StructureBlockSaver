@@ -72,7 +72,11 @@ public class TargetedSaveTask implements TickProcessor.TickTask {
                 StructureTemplate template = manager.getOrCreate(location);
                 template.fillFromWorld(level, sbe.getBlockPos().offset(sbe.getStructurePos()), sbe.getStructureSize(), !sbe.isIgnoreEntities(), java.util.List.of(Blocks.STRUCTURE_VOID));
                 CompoundTag tag = template.save(new CompoundTag());
-                ServerPlayNetworking.send(player, new ClientboundSaveStructurePayload(name, tag));
+                if (ServerPlayNetworking.canSend(player, ClientboundSaveStructurePayload.TYPE)) {
+                    ServerPlayNetworking.send(player, new ClientboundSaveStructurePayload(name, tag));
+                } else {
+                    player.sendSystemMessage(Component.literal("You must have the client mod installed to save locally."));
+                }
                 processedCount++;
             } catch (Exception e) {
                 com.finndog.StructureBlockSaver.LOGGER.error("Failed to process local structure save for {}", name, e);

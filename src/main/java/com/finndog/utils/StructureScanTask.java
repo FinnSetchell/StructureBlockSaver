@@ -115,7 +115,11 @@ public class StructureScanTask implements TickProcessor.TickTask {
 							net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate template = manager.getOrCreate(location);
 							template.fillFromWorld(level, sbe.getBlockPos().offset(sbe.getStructurePos()), sbe.getStructureSize(), !sbe.isIgnoreEntities(), java.util.List.of(net.minecraft.world.level.block.Blocks.STRUCTURE_VOID));
 							net.minecraft.nbt.CompoundTag tag = template.save(new net.minecraft.nbt.CompoundTag());
-							net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send((net.minecraft.server.level.ServerPlayer) source.getPlayer(), new com.finndog.network.ClientboundSaveStructurePayload(name, tag));
+							if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend((net.minecraft.server.level.ServerPlayer) source.getPlayer(), com.finndog.network.ClientboundSaveStructurePayload.TYPE)) {
+								net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send((net.minecraft.server.level.ServerPlayer) source.getPlayer(), new com.finndog.network.ClientboundSaveStructurePayload(name, tag));
+							} else {
+								source.sendFailure(net.minecraft.network.chat.Component.literal("You must have the client mod installed to save locally."));
+							}
 						} catch (Exception e) {
 							com.finndog.StructureBlockSaver.LOGGER.error("Failed to process local structure save for {}", name, e);
 							continue;
@@ -134,7 +138,11 @@ public class StructureScanTask implements TickProcessor.TickTask {
 	private void finish() {
 		if (menuMode) {
 			if (source.getPlayer() instanceof net.minecraft.server.level.ServerPlayer sp) {
-				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new com.finndog.network.ClientboundOpenMenuPayload(menuResults));
+				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(sp, com.finndog.network.ClientboundOpenMenuPayload.TYPE)) {
+					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, new com.finndog.network.ClientboundOpenMenuPayload(menuResults));
+				} else {
+					sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("You must have the Structure Block Saver mod installed on your client to use the menu."));
+				}
 			}
 		} else if (listMode) {
 			StringBuilder sb = new StringBuilder("Found ").append(results.size()).append(" structure block(s)");

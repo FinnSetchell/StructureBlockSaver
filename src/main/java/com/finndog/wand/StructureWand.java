@@ -80,7 +80,9 @@ public class StructureWand {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
 		pos1Map.remove(player.getUUID());
 		pos2Map.remove(player.getUUID());
-		ServerPlayNetworking.send(player, new ClearSelectionPayload());
+		if (ServerPlayNetworking.canSend(player, ClearSelectionPayload.TYPE)) {
+			ServerPlayNetworking.send(player, new ClearSelectionPayload());
+		}
 		ctx.getSource().sendSuccess(() -> Component.literal("Selection cleared."), false);
 		return 1;
 	}
