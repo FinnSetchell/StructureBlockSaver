@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.3] - 2026-05-28
+
+### Added
+- Added hover tooltip for long structure names in the GUI.
+- Added "TP" button to the GUI to teleport to a structure block.
+- Added "Open Folder" button to easily access the local structures directory.
+
+### Fixed
+- Fixed `DecoderException` kicks on massive structures by compressing NBT packets over the network.
+- Fixed server kicks from rate-limit timeouts during large batch downloads by throttling outbound structure packets.
+- Moved client-side structure saving to an asynchronous background thread to eliminate micro-stutters.
 ## [1.1.2] - 2026-04-02
 
 ### Changed
