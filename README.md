@@ -60,10 +60,25 @@ Periodically re-saves all structure blocks in your current wand selection. Defau
 
 Lists every structure block in the area with its mode (SAVE, LOAD, CORNER, DATA), name, and save region size. Useful for auditing large builds.
 
+### Menu (Client Mod Required)
+
+```
+/sbs menu
+/sbs menu <pos1> <pos2>
+```
+
+Opens an interactive graphical menu that lists all structure blocks in the selection. From this menu you can:
+- **Save All Locally**: Downloads and saves all selected structures directly to your client's `.minecraft/structures` folder (bypassing the server filesystem).
+- **Open Folder**: Opens your local structures directory.
+- **TP**: Instantly teleports you to the exact location of a specific structure block.
+- Hover over truncated structure names to view their full path.
+
+*Note: The server must have the mod installed to scan the structures, but the GUI menu and local saving features require the mod to be installed on your client as well.*
+
 ---
 
 ## Requirements
 
-- Minecraft 1.21.1
-- Fabric Loader 0.18.6+
+- Minecraft 1.21.10
+- Fabric Loader 0.19.2+
 - Fabric API
