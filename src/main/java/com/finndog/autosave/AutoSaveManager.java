@@ -1,6 +1,7 @@
 package com.finndog.autosave;
 
 import com.finndog.wand.StructureWand;
+import com.finndog.wand.WandSavedData;
 import com.finndog.utils.StructureScanTask;
 import com.finndog.utils.TickProcessor;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -52,8 +53,9 @@ public class AutoSaveManager {
 
     private static int start(CommandContext<CommandSourceStack> ctx, int seconds) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        BlockPos pos1 = StructureWand.pos1Map.get(player.getUUID());
-        BlockPos pos2 = StructureWand.pos2Map.get(player.getUUID());
+        WandSavedData state = WandSavedData.getServerState(((net.minecraft.server.level.ServerLevel) player.level()).getServer());
+        BlockPos pos1 = state.pos1Map.get(player.getUUID());
+        BlockPos pos2 = state.pos2Map.get(player.getUUID());
         if (pos1 == null || pos2 == null) {
             ctx.getSource().sendFailure(Component.literal("Select both positions with the Structure Wand first."));
             return 0;

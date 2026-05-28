@@ -1,6 +1,7 @@
 package com.finndog.commands;
 
 import com.finndog.wand.StructureWand;
+import com.finndog.wand.WandSavedData;
 import com.finndog.utils.StructureScanTask;
 import com.finndog.utils.TickProcessor;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -129,8 +130,9 @@ public class SaveStructuresCommand {
 	private static int fromWand(CommandContext<CommandSourceStack> ctx, String filter, boolean dryRun, boolean localSave) throws CommandSyntaxException {
 		CommandSourceStack source = ctx.getSource();
 		ServerPlayer player = source.getPlayerOrException();
-		BlockPos pos1 = StructureWand.pos1Map.get(player.getUUID());
-		BlockPos pos2 = StructureWand.pos2Map.get(player.getUUID());
+		WandSavedData state = WandSavedData.getServerState(((net.minecraft.server.level.ServerLevel) player.level()).getServer());
+		BlockPos pos1 = state.pos1Map.get(player.getUUID());
+		BlockPos pos2 = state.pos2Map.get(player.getUUID());
 		if (pos1 == null || pos2 == null) {
 			source.sendFailure(Component.literal("Select both positions with the Structure Wand first."));
 			return 0;
@@ -180,8 +182,9 @@ public class SaveStructuresCommand {
 	private static int executeListOrMenu(CommandContext<CommandSourceStack> ctx, boolean menu) throws CommandSyntaxException {
 		CommandSourceStack source = ctx.getSource();
 		ServerPlayer player = source.getPlayerOrException();
-		BlockPos pos1 = StructureWand.pos1Map.get(player.getUUID());
-		BlockPos pos2 = StructureWand.pos2Map.get(player.getUUID());
+		WandSavedData state = WandSavedData.getServerState(((net.minecraft.server.level.ServerLevel) player.level()).getServer());
+		BlockPos pos1 = state.pos1Map.get(player.getUUID());
+		BlockPos pos2 = state.pos2Map.get(player.getUUID());
 		if (pos1 == null || pos2 == null) {
 			source.sendFailure(Component.literal("Select both positions with the Structure Wand first."));
 			return 0;

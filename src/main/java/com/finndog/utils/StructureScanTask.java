@@ -1,5 +1,6 @@
 package com.finndog.utils;
 
+import com.finndog.wand.WandSavedData;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -29,8 +30,10 @@ public class StructureScanTask implements TickProcessor.TickTask {
 	private final boolean menuMode;
 
 	private final Queue<ChunkPos> chunksToProcess = new LinkedList<>();
+	private final Queue<com.finndog.network.ClientboundSaveStructurePayload> payloadsToSend = new LinkedList<>();
 	private final List<String> results = new ArrayList<>();
 	private final List<com.finndog.network.ClientboundOpenMenuPayload.StructureInfo> menuResults = new ArrayList<>();
+    private int ticks = 0;
 
 	private final int totalChunks;
 	private final int minX, maxX, minY, maxY, minZ, maxZ;
@@ -69,14 +72,25 @@ public class StructureScanTask implements TickProcessor.TickTask {
 
 	@Override
 	public boolean tick() {
+        ticks++;
+		if (!payloadsToSend.isEmpty()) {
+            if (ticks % 4 == 0) {
+			    if (source.getPlayer() instanceof net.minecraft.server.level.ServerPlayer sp) {
+				    net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, payloadsToSend.poll());
+			    } else {
+				    payloadsToSend.poll(); // Discard if not a player
+			    }
+            }
+		}
+
 		int chunksThisTick = 0;
-		while (!chunksToProcess.isEmpty() && chunksThisTick < 16) {
+		while (!chunksToProcess.isEmpty() && payloadsToSend.size() < 5 && chunksThisTick < 16) {
 			ChunkPos cp = chunksToProcess.poll();
 			processChunk(cp);
 			chunksThisTick++;
 		}
 
-		if (chunksToProcess.isEmpty()) {
+		if (chunksToProcess.isEmpty() && payloadsToSend.isEmpty()) {
 			finish();
 			return true;
 		}
@@ -116,7 +130,9 @@ public class StructureScanTask implements TickProcessor.TickTask {
 							template.fillFromWorld(level, sbe.getBlockPos().offset(sbe.getStructurePos()), sbe.getStructureSize(), !sbe.isIgnoreEntities(), java.util.List.of(net.minecraft.world.level.block.Blocks.STRUCTURE_VOID));
 							net.minecraft.nbt.CompoundTag tag = template.save(new net.minecraft.nbt.CompoundTag());
 							if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend((net.minecraft.server.level.ServerPlayer) source.getPlayer(), com.finndog.network.ClientboundSaveStructurePayload.TYPE)) {
-								net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send((net.minecraft.server.level.ServerPlayer) source.getPlayer(), new com.finndog.network.ClientboundSaveStructurePayload(name, tag));
+                                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                                net.minecraft.nbt.NbtIo.writeCompressed(tag, bos);
+								payloadsToSend.add(new com.finndog.network.ClientboundSaveStructurePayload(name, bos.toByteArray()));
 							} else {
 								source.sendFailure(net.minecraft.network.chat.Component.literal("You must have the client mod installed to save locally."));
 							}

@@ -54,8 +54,15 @@ public class StructureBlockSaverClient implements ClientModInitializer {
             });
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundSaveStructurePayload.TYPE, (payload, context) -> {
+        ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundSyncSelectionPayload.TYPE, (payload, context) -> {
             context.client().execute(() -> {
+                ClientWandData.pos1 = payload.pos1().orElse(null);
+                ClientWandData.pos2 = payload.pos2().orElse(null);
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(com.finndog.network.ClientboundSaveStructurePayload.TYPE, (payload, context) -> {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("structures");
                     String safeName = payload.name().replace(":", "/");
@@ -63,11 +70,19 @@ public class StructureBlockSaverClient implements ClientModInitializer {
                     if (!java.nio.file.Files.exists(targetFile.getParent())) {
                         java.nio.file.Files.createDirectories(targetFile.getParent());
                     }
-                    net.minecraft.nbt.NbtIo.writeCompressed(payload.nbt(), targetFile);
-                    context.player().displayClientMessage(net.minecraft.network.chat.Component.literal("Saved local structure: " + payload.name()), false);
+                    java.nio.file.Files.write(targetFile, payload.compressedNbt());
+                    context.client().execute(() -> {
+                        if (context.player() != null) {
+                            context.player().displayClientMessage(net.minecraft.network.chat.Component.literal("Saved local structure: " + payload.name()), false);
+                        }
+                    });
                 } catch (Exception e) {
                     StructureBlockSaver.LOGGER.error("Failed to save local structure", e);
-                    context.player().displayClientMessage(net.minecraft.network.chat.Component.literal("Failed to save local structure " + payload.name()), false);
+                    context.client().execute(() -> {
+                        if (context.player() != null) {
+                            context.player().displayClientMessage(net.minecraft.network.chat.Component.literal("Failed to save local structure " + payload.name()), false);
+                        }
+                    });
                 }
             });
         });

@@ -23,17 +23,16 @@ import java.util.UUID;
 
 public class StructureWand {
 
-	public static final Map<UUID, BlockPos> pos1Map = new HashMap<>();
-	public static final Map<UUID, BlockPos> pos2Map = new HashMap<>();
-
 	public static void register() {
 		UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
 			if (world.isClientSide()) return InteractionResult.PASS;
 			if (!isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
 
 			BlockPos pos = hitResult.getBlockPos();
-			if (pos.equals(pos1Map.get(player.getUUID()))) return InteractionResult.SUCCESS;
-			pos1Map.put(player.getUUID(), pos);
+			WandSavedData state = WandSavedData.getServerState(world.getServer());
+			if (pos.equals(state.pos1Map.get(player.getUUID()))) return InteractionResult.SUCCESS;
+			state.pos1Map.put(player.getUUID(), pos);
+			state.setDirty();
 			((ServerPlayer) player).sendSystemMessage(Component.literal("Position 1 set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
 			return InteractionResult.SUCCESS;
 		});
@@ -42,8 +41,10 @@ public class StructureWand {
 			if (world.isClientSide()) return InteractionResult.PASS;
 			if (!isWand(player.getItemInHand(hand))) return InteractionResult.PASS;
 
-			if (pos.equals(pos2Map.get(player.getUUID()))) return InteractionResult.SUCCESS;
-			pos2Map.put(player.getUUID(), pos);
+			WandSavedData state = WandSavedData.getServerState(world.getServer());
+			if (pos.equals(state.pos2Map.get(player.getUUID()))) return InteractionResult.SUCCESS;
+			state.pos2Map.put(player.getUUID(), pos);
+			state.setDirty();
 			((ServerPlayer) player).sendSystemMessage(Component.literal("Position 2 set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
 			return InteractionResult.SUCCESS;
 		});
@@ -78,8 +79,10 @@ public class StructureWand {
 
 	private static int clearSelection(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
 		ServerPlayer player = ctx.getSource().getPlayerOrException();
-		pos1Map.remove(player.getUUID());
-		pos2Map.remove(player.getUUID());
+		WandSavedData state = WandSavedData.getServerState(((net.minecraft.server.level.ServerLevel) player.level()).getServer());
+		state.pos1Map.remove(player.getUUID());
+		state.pos2Map.remove(player.getUUID());
+		state.setDirty();
 		if (ServerPlayNetworking.canSend(player, ClearSelectionPayload.TYPE)) {
 			ServerPlayNetworking.send(player, new ClearSelectionPayload());
 		}

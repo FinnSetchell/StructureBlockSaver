@@ -38,9 +38,14 @@ public class StructureMenuScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("Refresh"), btn -> runCommand("sbs menu")).bounds(this.width / 2 + 85, topY, 75, 20).build());
 
         // Search Box
-        this.searchBox = new EditBox(this.font, this.width / 2 - 160, topY + 25, 200, 20, Component.literal("Search..."));
+        this.searchBox = new EditBox(this.font, this.width / 2 - 160, topY + 25, 140, 20, Component.literal("Search..."));
         this.searchBox.setResponder(s -> refreshList());
         this.addRenderableWidget(this.searchBox);
+
+        // Open Folder Button
+        this.addRenderableWidget(Button.builder(Component.literal("Open Folder"), btn -> {
+            net.minecraft.Util.getPlatform().openFile(net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("structures").toFile());
+        }).bounds(this.width / 2 - 15, topY + 25, 55, 20).build());
 
         // Sort Button
         this.addRenderableWidget(Button.builder(Component.literal("Sort: Name"), btn -> {
@@ -98,7 +103,6 @@ public class StructureMenuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 5, -1);
     }

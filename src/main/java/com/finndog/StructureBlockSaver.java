@@ -10,9 +10,11 @@ import com.finndog.wand.StructureWand;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import org.slf4j.Logger;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public class StructureBlockSaver implements ModInitializer {
@@ -24,6 +26,7 @@ public class StructureBlockSaver implements ModInitializer {
 		PayloadTypeRegistry.playS2C().register(ClearSelectionPayload.TYPE, ClearSelectionPayload.STREAM_CODEC);
 		PayloadTypeRegistry.playS2C().register(ClientboundSaveStructurePayload.TYPE, ClientboundSaveStructurePayload.STREAM_CODEC);
 		PayloadTypeRegistry.playS2C().register(com.finndog.network.ClientboundOpenMenuPayload.TYPE, com.finndog.network.ClientboundOpenMenuPayload.STREAM_CODEC);
+		PayloadTypeRegistry.playS2C().register(com.finndog.network.ClientboundSyncSelectionPayload.TYPE, com.finndog.network.ClientboundSyncSelectionPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(ExpandSelectionPayload.TYPE, ExpandSelectionPayload.STREAM_CODEC);
 		PayloadTypeRegistry.playC2S().register(com.finndog.network.ServerboundTargetedSavePayload.TYPE, com.finndog.network.ServerboundTargetedSavePayload.STREAM_CODEC);
 
@@ -34,13 +37,26 @@ public class StructureBlockSaver implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(ExpandSelectionPayload.TYPE, (payload, context) -> {
 			context.server().execute(() -> {
 				UUID uuid = context.player().getUUID();
+				com.finndog.wand.WandSavedData state = com.finndog.wand.WandSavedData.getServerState(context.server());
 				if (payload.isPos1()) {
-					StructureWand.pos1Map.put(uuid, payload.newPos());
+					state.pos1Map.put(uuid, payload.newPos());
 				}
 				else {
-					StructureWand.pos2Map.put(uuid, payload.newPos());
+					state.pos2Map.put(uuid, payload.newPos());
 				}
+				state.setDirty();
 			});
+		});
+
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			UUID uuid = handler.player.getUUID();
+			com.finndog.wand.WandSavedData state = com.finndog.wand.WandSavedData.getServerState(server);
+			if (ServerPlayNetworking.canSend(handler.player, com.finndog.network.ClientboundSyncSelectionPayload.TYPE)) {
+				ServerPlayNetworking.send(handler.player, new com.finndog.network.ClientboundSyncSelectionPayload(
+					Optional.ofNullable(state.pos1Map.get(uuid)),
+					Optional.ofNullable(state.pos2Map.get(uuid))
+				));
+			}
 		});
 
 		AutoSaveManager.register();

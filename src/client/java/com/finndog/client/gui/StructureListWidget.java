@@ -21,7 +21,21 @@ public class StructureListWidget extends ObjectSelectionList<StructureListWidget
 
     @Override
     public int getRowWidth() {
-        return 280;
+        return 380;
+    }
+
+    @Override
+    public void renderWidget(GuiGraphics arg, int mouseX, int mouseY, float f) {
+        super.renderWidget(arg, mouseX, mouseY, f);
+        Entry hovered = this.getHovered();
+        if (hovered != null) {
+            int left = hovered.getX();
+            int top = hovered.getY();
+            int maxTextWidth = this.getRowWidth() - 155;
+            if (mouseX >= left + 5 && mouseX <= left + 5 + maxTextWidth && mouseY >= top && mouseY <= top + hovered.getHeight()) {
+                arg.setTooltipForNextFrame(Component.literal(hovered.info.name()), mouseX, mouseY);
+            }
+        }
     }
 
     public void addStructureEntry(StructureInfo info) {
@@ -72,6 +86,11 @@ public class StructureListWidget extends ObjectSelectionList<StructureListWidget
             int top = this.getY();
             int width = this.getWidth();
             String text = info.name() + " (" + info.size().getX() + "x" + info.size().getY() + "x" + info.size().getZ() + ")";
+            
+            int maxTextWidth = width - 155;
+            if (Minecraft.getInstance().font.width(text) > maxTextWidth) {
+                text = Minecraft.getInstance().font.plainSubstrByWidth(text, maxTextWidth - Minecraft.getInstance().font.width("...")) + "...";
+            }
             guiGraphics.drawString(Minecraft.getInstance().font, text, left + 5, top + 6, -1);
 
             this.tpButton.setX(left + width - 150);

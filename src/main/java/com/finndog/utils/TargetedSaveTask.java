@@ -1,6 +1,7 @@
 package com.finndog.utils;
 
 import com.finndog.network.ClientboundSaveStructurePayload;
+import com.finndog.wand.WandSavedData;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -23,9 +24,11 @@ public class TargetedSaveTask implements TickProcessor.TickTask {
     private final ServerLevel level;
     private final boolean localSave;
     private final Queue<BlockPos> positionsToProcess;
+    private final Queue<ClientboundSaveStructurePayload> payloadsToSend = new LinkedList<>();
     private int processedCount = 0;
     private int failCount = 0;
     private final int total;
+    private int ticks = 0;
 
     public TargetedSaveTask(ServerPlayer player, List<BlockPos> positions, boolean localSave) {
         this.player = player;
@@ -42,14 +45,21 @@ public class TargetedSaveTask implements TickProcessor.TickTask {
 
     @Override
     public boolean tick() {
+        ticks++;
+        if (!payloadsToSend.isEmpty()) {
+            if (ticks % 4 == 0) {
+                ServerPlayNetworking.send(player, payloadsToSend.poll());
+            }
+        }
+
         int processedThisTick = 0;
-        while (!positionsToProcess.isEmpty() && processedThisTick < 16) {
+        while (!positionsToProcess.isEmpty() && payloadsToSend.size() < 5 && processedThisTick < 16) {
             BlockPos pos = positionsToProcess.poll();
             processPosition(pos);
             processedThisTick++;
         }
 
-        if (positionsToProcess.isEmpty()) {
+        if (positionsToProcess.isEmpty() && payloadsToSend.isEmpty()) {
             finish();
             return true;
         }
@@ -73,7 +83,9 @@ public class TargetedSaveTask implements TickProcessor.TickTask {
                 template.fillFromWorld(level, sbe.getBlockPos().offset(sbe.getStructurePos()), sbe.getStructureSize(), !sbe.isIgnoreEntities(), java.util.List.of(Blocks.STRUCTURE_VOID));
                 CompoundTag tag = template.save(new CompoundTag());
                 if (ServerPlayNetworking.canSend(player, ClientboundSaveStructurePayload.TYPE)) {
-                    ServerPlayNetworking.send(player, new ClientboundSaveStructurePayload(name, tag));
+                    java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                    net.minecraft.nbt.NbtIo.writeCompressed(tag, bos);
+                    payloadsToSend.add(new ClientboundSaveStructurePayload(name, bos.toByteArray()));
                 } else {
                     player.sendSystemMessage(Component.literal("You must have the client mod installed to save locally."));
                 }
